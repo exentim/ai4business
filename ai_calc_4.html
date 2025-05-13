@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="de"> <!-- Default lang, will be updated by JS -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate-key="pageTitle">LLM-Infrastruktur Skalierungsrechner</title>
+    <style>
+        :root {
+            --bg-color: #fff;
+            --text-color: #333;
+            --header-color: #2c3e50;
+            --table-border-color: #ddd;
+            --table-header-bg: #f8f9fa;
+            --table-even-row-bg: #f2f2f2;
+            --controls-bg: #f8f9fa;
+            --controls-border-color: #ddd;
+            --input-border-color: #ddd;
+            --input-bg-color: #fff; /* Input background */
+            --button-bg-color: #4CAF50;
+            --button-text-color: white;
+            --button-hover-bg-color: #45a049;
+            --tab-bg-color: #f1f1f1;
+            --tab-border-color: #ccc;
+            --tab-button-color: #333;
+            --tab-button-hover-bg-color: #ddd;
+            --tab-button-active-bg-color: #4CAF50;
+            --tab-button-active-text-color: white;
+            --settings-control-bg: #efefef; /* Lighter for better contrast on main bg */
+            --settings-control-border: #ccc;
+            --settings-control-text: #333;
+            --arrow-color: '%23333333'; /* URL encoded #333333 for SVG */
+
+        }
+
+        .dark-mode {
+            --bg-color: #1e1e1e; /* Slightly off-black */
+            --text-color: #e0e0e0; /* Light gray for text */
+            --header-color: #79bbff; /* Lighter blue for headers */
+            --table-border-color: #444;
+            --table-header-bg: #2a2a2a;
+            --table-even-row-bg: #252525;
+            --controls-bg: #2a2a2a;
+            --controls-border-color: #444;
+            --input-border-color: #555;
+            --input-bg-color: #333; /* Darker input background */
+            --button-bg-color: #5cb85c; /* Green, but can adjust */
+            --button-text-color: #fff;
+            --button-hover-bg-color: #4cae4c;
+            --tab-bg-color: #2a2a2a;
+            --tab-border-color: #444;
+            --tab-button-color: #e0e0e0;
+            --tab-button-hover-bg-color: #383838;
+            --tab-button-active-bg-color: #5cb85c;
+            --tab-button-active-text-color: #fff;
+            --settings-control-bg: #333;
+            --settings-control-border: #555;
+            --settings-control-text: #e0e0e0;
+            --arrow-color: '%23e0e0e0'; /* URL encoded #e0e0e0 for SVG */
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            max-width: 1200px;
+            margin: 0 auto;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        h1, h2 {
+            color: var(--header-color);
+        }
+        .container {
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px 15px;
+            border: 1px solid var(--table-border-color);
+            text-align: left;
+        }
+        th {
+            background-color: var(--table-header-bg);
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: var(--table-even-row-bg);
+        }
+        .controls {
+            background-color: var(--controls-bg);
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid var(--controls-border-color);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"], select:not(.settings-control) { /* Exclude settings select from general select styling if needed */
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--input-border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: var(--input-bg-color);
+            color: var(--text-color);
+        }
+        button:not(.settings-control) { /* Exclude settings button */
+            background-color: var(--button-bg-color);
+            color: var(--button-text-color);
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:not(.settings-control):hover {
+            background-color: var(--button-hover-bg-color);
+        }
+        .chart-container {
+            margin-top: 30px;
+            height: 400px;
+        }
+        .tab {
+            overflow: hidden;
+            border: 1px solid var(--tab-border-color);
+            background-color: var(--tab-bg-color);
+        }
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            color: var(--tab-button-color);
+        }
+        .tab button:hover {
+            background-color: var(--tab-button-hover-bg-color);
+        }
+        .tab button.active {
+            background-color: var(--tab-button-active-bg-color);
+            color: var(--tab-button-active-text-color);
+        }
+        .tabcontent {
+            display: none;
+            padding: 20px;
+            border: 1px solid var(--tab-border-color);
+            border-top: none;
+            background-color: var(--controls-bg); /* Match controls background for tab content area */
+        }
+        .visible {
+            display: block;
+        }
+
+        .settings-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .settings-control {
+            padding: 6px 10px; /* Smaller padding for a more compact look */
+            font-size: 14px;
+            border-radius: 4px;
+            border: 1px solid var(--settings-control-border);
+            background-color: var(--settings-control-bg);
+            color: var(--settings-control-text);
+            cursor: pointer;
+            height: 32px; /* Fixed height for alignment */
+            box-sizing: border-box;
+        }
+        .settings-control:hover {
+            border-color: var(--header-color);
+        }
+        
+        #languageSelector.settings-control {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20256%20448%22%20enable-background%3D%22new%200%200%20256%20448%22%3E%3Cstyle%20type%3D%22text/css%22%3E.arrow%7Bfill%3Avar(--arrow-color-css-var)%3B%7D%3C/style%3E%3Cpath%20class%3D%22arrow%22%20d%3D%22M255.9%20164.2L141.6%2049.9c-4.7-4.7-12.3-4.7-17%200L10.3%20164.2c-4.7%204.7-4.7%2012.3%200%2017l22.6%2022.6c4.7%204.7%2012.3%204.7%2017%200l82.7-82.7%2082.7%2082.7c4.7%204.7%2012.3%204.7%2017%200l22.6-22.6c4.8-4.7%204.8-12.3%20.1-17z%22%20transform%3D%22rotate(90%20128%20128)%20translate(0%20-110)%20scale(0.6%201)%22/%3E%3C/svg%3E');
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 10px auto;
+            padding-right: 28px; /* Make space for arrow */
+        }
+        /* Dynamic SVG arrow color based on CSS var */
+        #languageSelector.settings-control {
+            background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='VAR_ARROW_COLOR' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E".replace('VAR_ARROW_COLOR', getComputedStyle(document.documentElement).getPropertyValue('--arrow-color')));
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="settings-bar">
+        <select id="languageSelector" class="settings-control"></select>
+        <button id="darkModeToggle" class="settings-control" data-translate-key="toggleDarkMode">Dark Mode</button>
+    </div>
+
+    <h1 data-translate-key="mainHeader">LLM-Infrastruktur Skalierungsrechner</h1>
+    
+    <div class="controls">
+        <h2 data-translate-key="adjustParamsHeader">Parameter anpassen</h2>
+        <!-- Tooltip example: title attribute will be set by JS -->
+        <div class="form-group">
+            <label for="startQuarter" data-translate-key="startQuarterLabel" data-tooltip-key="tooltipStartQuarter">Startquartal:</label>
+            <select id="startQuarter">
+                <option value="2025_Q1">2025_Q1</option>
+                <option value="2025_Q2" selected>2025_Q2</option>
+                <option value="2025_Q3">2025_Q3</option>
+                <option value="2025_Q4">2025_Q4</option>
+                <option value="2026_Q1">2026_Q1</option>
+                <option value="2026_Q2">2026_Q2</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="startUsers" data-translate-key="startUsersLabel" data-tooltip-key="tooltipStartUsers">Startanzahl der Nutzer:</label>
+            <input type="number" id="startUsers" value="20" min="1">
+        </div>
+        <div class="form-group">
+            <label for="quarterlyGrowthRate" data-translate-key="initialGrowthRateLabel" data-tooltip-key="tooltipInitialGrowthRate">Anfängliches quartalsweises Wachstum (in %):</label>
+            <input type="number" id="quarterlyGrowthRate" value="10" min="0" max="100">
+        </div>
+        <div class="form-group">
+            <label for="initialExponentialYears" data-translate-key="initialExponentialYearsLabel" data-tooltip-key="tooltipInitialExponentialYears">Dauer des anfänglichen exponentiellen Wachstums (Jahre):</label>
+            <input type="number" id="initialExponentialYears" value="2" min="0">
+        </div>
+        <div class="form-group">
+            <label for="flatteningTypeAfterInitial" data-translate-key="growthTypeAfterInitialLabel" data-tooltip-key="tooltipGrowthTypeAfterInitial">Wachstumstyp nach anfänglicher Phase:</label>
+            <select id="flatteningTypeAfterInitial">
+                <option value="exponentiellWeiter" data-translate-key="optionExponentiellWeiter" selected>Exponentiell weiter</option>
+                <option value="moderatesAbflachen" data-translate-key="optionModeratesAbflachen">Moderates Abflachen</option>
+                <option value="starkesAbflachen" data-translate-key="optionStarkesAbflachen">Starkes Abflachen</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="loggedInUserFactor" data-translate-key="loggedInUserFactorLabel" data-tooltip-key="tooltipLoggedInUserFactor">Faktor eingeloggte Nutzer (% der Gesamtnutzer):</label>
+            <input type="number" id="loggedInUserFactor" value="10" min="1" max="100">
+        </div>
+        <div class="form-group">
+            <label for="simultaneousActiveUserFactor" data-translate-key="simultaneousActiveUserFactorLabel" data-tooltip-key="tooltipSimultaneousActiveUserFactor">Faktor gleichzeitig aktive Nutzer (% der eingeloggten Nutzer):</label>
+            <input type="number" id="simultaneousActiveUserFactor" value="10" min="1" max="100">
+        </div>
+        <div class="form-group">
+            <label for="maxUsers" data-translate-key="maxUsersLabel" data-tooltip-key="tooltipMaxUsers">Maximale Anzahl der Nutzer:</label>
+            <input type="number" id="maxUsers" value="600" min="1">
+        </div>
+        <div class="form-group">
+            <label for="initialVRAM" data-translate-key="initialVRAMLabel" data-tooltip-key="tooltipInitialVRAM">Start vRAM pro Basis-GPU-Einheit (GB):</label>
+            <input type="number" id="initialVRAM" value="128" min="16">
+        </div>
+        <div class="form-group">
+            <label for="oneTimeHardwareCost" data-translate-key="oneTimeHardwareCostLabel" data-tooltip-key="tooltipOneTimeHardwareCost">Einmalanschaffung Hardware-Cluster (€):</label>
+            <input type="number" id="oneTimeHardwareCost" value="50000" min="0">
+        </div>
+        <button onclick="calculateAndDisplay()" data-translate-key="calculateButton">Berechnen</button>
+    </div>
+
+    <div class="tab">
+        <button class="tablinks active" onclick="openTab(event, 'UserGrowth')" data-translate-key="tabUserGrowth">Nutzerwachstum</button>
+        <button class="tablinks" onclick="openTab(event, 'Infrastructure')" data-translate-key="tabInfrastructure">Infrastrukturanforderungen</button>
+        <button class="tablinks" onclick="openTab(event, 'Costs')" data-translate-key="tabCosts">Kostenschätzung</button>
+    </div>
+
+    <div id="UserGrowth" class="tabcontent visible">
+        <h2 data-translate-key="headerUserGrowth">Nutzerwachstum und aktive Nutzer</h2>
+        <div id="growthSummary" class="container"></div>
+        <div id="growthTable" class="container"></div>
+        <div class="chart-container">
+            <canvas id="userGrowthChart"></canvas>
+        </div>
+    </div>
+
+    <div id="Infrastructure" class="tabcontent">
+        <h2 data-translate-key="headerInfrastructure">Infrastrukturanforderungen</h2>
+        <div id="infrastructureTable" class="container"></div>
+        <div class="chart-container">
+            <canvas id="infrastructureChart"></canvas>
+        </div>
+    </div>
+
+    <div id="Costs" class="tabcontent">
+        <h2 data-translate-key="headerCosts">Kostenschätzung</h2>
+        <div id="costsTable" class="container"></div>
+        <div class="chart-container">
+            <canvas id="costsChart"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        let userGrowthChart = null;
+        let infrastructureChart = null;
+        let costsChart = null;
+        let currentLanguage = 'en'; // Default language
+
+    // --- TRANSLATIONS ---
+        const translations = {
+            'en': {
+                // ... (English translation) ...
+                'pageTitle': 'LLM Infrastructure Scaling Calculator',
+                'mainHeader': 'LLM Infrastructure Scaling Calculator',
+                'adjustParamsHeader': 'Adjust Parameters',
+                'startQuarterLabel': 'Start Quarter:',
+                'startUsersLabel': 'Initial User Count:',
+                'initialGrowthRateLabel': 'Initial Quarterly Growth (%):',
+                'initialExponentialYearsLabel': 'Duration of Initial Exponential Growth (Years):',
+                'growthTypeAfterInitialLabel': 'Growth Type After Initial Phase:',
+                'optionExponentiellWeiter': 'Continue Exponentially',
+                'optionModeratesAbflachen': 'Moderate Flattening',
+                'optionStarkesAbflachen': 'Strong Flattening',
+                'loggedInUserFactorLabel': 'Logged-in User Factor (% of Total):',
+                'simultaneousActiveUserFactorLabel': 'Simultaneously Active User Factor (% of Logged-in):',
+                'maxUsersLabel': 'Maximum User Count:',
+                'initialVRAMLabel': 'Initial vRAM per Base GPU Unit (GB):',
+                'oneTimeHardwareCostLabel': 'One-Time Hardware Cluster Cost (€):',
+                'calculateButton': 'Calculate',
+                'tabUserGrowth': 'User Growth',
+                'tabInfrastructure': 'Infrastructure Requirements',
+                'tabCosts': 'Cost Estimation',
+                'headerUserGrowth': 'User Growth and Active Users',
+                'headerInfrastructure': 'Infrastructure Requirements',
+                'headerCosts': 'Cost Estimation',
+                'toggleDarkMode': 'Dark Mode',
+                'toggleLightMode': 'Light Mode',
+                'summaryStartUsers': 'Initial count:',
+                'summaryUsersSuffix': 'users from',
+                'summaryMaxCapacityReached': 'Maximum capacity ({maxUsers} users) reached after:',
+                'summaryQuarters': 'quarters',
+                'summaryYears': 'years',
+                'summaryTimeTo5PlusActive': 'Time to 5+ simultaneous active users:',
+                'summaryNotReached': 'not reached',
+                'summaryActiveUsersStart': 'Active users at start ({quarter}):',
+                'summaryActiveUsersAtMax': 'Active users at {maxUsers} users ({quarter}):',
+                'tableHeaderQuarter': 'Quarter',
+                'tableHeaderTotalUsers': 'Total Users',
+                'tableHeaderLoggedIn': 'Logged In',
+                'tableHeaderSimultaneouslyActive': 'Simultaneously Active',
+                'tableHeaderRequiredGPUs': 'Required GPUs',
+                'tableHeaderRecommendedConfig': 'Recommended vRAM Config',
+                'vramSuffixGB': 'GB',
+                'vramSuffixOrMore': 'GB (or more)',
+                'tableHeaderMonthlyOperatingCosts': 'Monthly Operating Costs (€)',
+                'tableHeaderOneTimeClusterCost': 'One-Time Hardware Cluster (€)',
+                'tableHeaderAnnualGPUCost': 'Add. Annual GPU Cost (€)',
+                'chartLabelTotalUsers': 'Total Users',
+                'chartLabelLoggedInUsers': 'Logged-in Users',
+                'chartLabelActiveUsers': 'Simultaneously Active Users',
+                'chartLabelRequiredGPUs': 'Required GPUs',
+                'chartLabelMonthlyCosts': 'Monthly Operating Costs (€)',
+                'tooltipStartQuarter': 'Select the quarter when the projection begins.',
+                'tooltipStartUsers': 'The number of users at the beginning of the projection.',
+                'tooltipInitialGrowthRate': 'The percentage growth of users per quarter during the initial phase.',
+                'tooltipInitialExponentialYears': 'How many years the initial exponential growth rate will be maintained.',
+                'tooltipGrowthTypeAfterInitial': 'How the growth rate changes after the initial exponential phase.',
+                'tooltipLoggedInUserFactor': 'Percentage of total users who are logged in.',
+                'tooltipSimultaneousActiveUserFactor': 'Percentage of logged-in users who are active at the same time.',
+                'tooltipMaxUsers': 'The maximum number of users the system is planned for.',
+                'tooltipInitialVRAM': 'The amount of vRAM provided by a single base GPU configuration unit.',
+                'tooltipOneTimeHardwareCost': 'The initial one-time cost for setting up the hardware cluster.',
+                'tooltipDarkMode': 'Toggle between light and dark visual themes.',
+                'tooltipLanguage': 'Select the display language for the calculator.',
+            },
+            'de': { 
+                'pageTitle': 'LLM-Infrastruktur Skalierungsrechner',
+                'mainHeader': 'LLM-Infrastruktur Skalierungsrechner',
+                'adjustParamsHeader': 'Parameter anpassen',
+                'startQuarterLabel': 'Startquartal:',
+                'startUsersLabel': 'Startanzahl der Nutzer:',
+                'initialGrowthRateLabel': 'Anfängliches quartalsweises Wachstum (in %):',
+                'initialExponentialYearsLabel': 'Dauer des anfänglichen exponentiellen Wachstums (Jahre):',
+                'growthTypeAfterInitialLabel': 'Wachstumstyp nach anfänglicher Phase:',
+                'optionExponentiellWeiter': 'Exponentiell weiter',
+                'optionModeratesAbflachen': 'Moderates Abflachen',
+                'optionStarkesAbflachen': 'Starkes Abflachen',
+                'loggedInUserFactorLabel': 'Faktor eingeloggte Nutzer (% der Gesamtnutzer):',
+                'simultaneousActiveUserFactorLabel': 'Faktor gleichzeitig aktive Nutzer (% der eingeloggten Nutzer):',
+                'maxUsersLabel': 'Maximale Anzahl der Nutzer:',
+                'initialVRAMLabel': 'Start vRAM pro Basis-GPU-Einheit (GB):',
+                'oneTimeHardwareCostLabel': 'Einmalanschaffung Hardware-Cluster (€):',
+                'calculateButton': 'Berechnen',
+                'tabUserGrowth': 'Nutzerwachstum',
+                'tabInfrastructure': 'Infrastrukturanforderungen',
+                'tabCosts': 'Kostenschätzung',
+                'headerUserGrowth': 'Nutzerwachstum und aktive Nutzer',
+                'headerInfrastructure': 'Infrastrukturanforderungen',
+                'headerCosts': 'Kostenschätzung',
+                'toggleDarkMode': 'Dunkelmodus',
+                'toggleLightMode': 'Heller Modus',
+                'summaryStartUsers': 'Startanzahl:',
+                'summaryUsersSuffix': 'Nutzer ab',
+                'summaryMaxCapacityReached': 'Maximalkapazität ({maxUsers} Nutzer) erreicht nach:',
+                'summaryQuarters': 'Quartalen',
+                'summaryYears': 'Jahren',
+                'summaryTimeTo5PlusActive': 'Dauer bis zu 5+ gleichzeitigen aktiven Nutzern:',
+                'summaryNotReached': 'nicht erreicht',
+                'summaryActiveUsersStart': 'Aktive Nutzer zu Beginn ({quarter}):',
+                'summaryActiveUsersAtMax': 'Aktive Nutzer bei {maxUsers} Nutzern ({quarter}):',
+                'tableHeaderQuarter': 'Quartal',
+                'tableHeaderTotalUsers': 'Gesamtnutzer',
+                'tableHeaderLoggedIn': 'Eingeloggt',
+                'tableHeaderSimultaneouslyActive': 'Gleichzeitig aktiv',
+                'tableHeaderRequiredGPUs': 'Benötigte GPUs',
+                'tableHeaderRecommendedConfig': 'Empfohlene Konfiguration (vRAM)',
+                'vramSuffixGB': 'GB',
+                'vramSuffixOrMore': 'GB (oder mehr)',
+                'tableHeaderMonthlyOperatingCosts': 'Monatliche Betriebskosten (€)',
+                'tableHeaderOneTimeClusterCost': 'Einmalanschaffung Hardware-Cluster (€)',
+                'tableHeaderAnnualGPUCost': 'Zusätzl. jährl. GPU-Kosten (€)',
+                'chartLabelTotalUsers': 'Gesamtnutzer',
+                'chartLabelLoggedInUsers': 'Eingeloggte Nutzer',
+                'chartLabelActiveUsers': 'Gleichzeitig aktive Nutzer',
+                'chartLabelRequiredGPUs': 'Benötigte GPUs',
+                'chartLabelMonthlyCosts': 'Monatliche Betriebskosten (€)',
+                'tooltipStartQuarter': 'Wählen Sie das Quartal aus, in dem die Projektion beginnt.',
+                'tooltipStartUsers': 'Die Anzahl der Nutzer zu Beginn der Projektion.',
+                'tooltipInitialGrowthRate': 'Das prozentuale Wachstum der Nutzer pro Quartal während der Anfangsphase.',
+                'tooltipInitialExponentialYears': 'Wie viele Jahre die anfängliche exponentielle Wachstumsrate beibehalten wird.',
+                'tooltipGrowthTypeAfterInitial': 'Wie sich die Wachstumsrate nach der anfänglichen exponentiellen Phase ändert.',
+                'tooltipLoggedInUserFactor': 'Prozentsatz der Gesamtbenutzer, die angemeldet sind.',
+                'tooltipSimultaneousActiveUserFactor': 'Prozentsatz der angemeldeten Benutzer, die gleichzeitig aktiv sind.',
+                'tooltipMaxUsers': 'Die maximale Anzahl von Nutzern, für die das System geplant ist.',
+                'tooltipInitialVRAM': 'Die Menge an vRAM, die eine einzelne Basis-GPU-Konfigurationseinheit bereitstellt.',
+                'tooltipOneTimeHardwareCost': 'Die anfänglichen einmaligen Kosten für die Einrichtung des Hardware-Clusters.',
+                'tooltipDarkMode': 'Wechseln zwischen hellem und dunklem Design.',
+                'tooltipLanguage': 'Wählen Sie die Anzeigesprache für den Rechner.',
+            },
+            // Example for Spanish with more complete placeholders
+            'es': { 
+                'pageTitle': '[es] Calculadora de Escalado de Infraestructura LLM',
+                'mainHeader': '[es] Calculadora de Escalado de Infraestructura LLM',
+                'adjustParamsHeader': '[es] Ajustar Parámetros',
+                'startQuarterLabel': '[es] Trimestre Inicial:',
+                'startUsersLabel': '[es] Número Inicial de Usuarios:',
+                'initialGrowthRateLabel': '[es] Crecimiento Trimestral Inicial (%):',
+                'initialExponentialYearsLabel': '[es] Duración del Crecimiento Exponencial Inicial (Años):',
+                'growthTypeAfterInitialLabel': '[es] Tipo de Crecimiento Después de la Fase Inicial:',
+                'optionExponentiellWeiter': '[es] Continuar Exponencialmente',
+                'optionModeratesAbflachen': '[es] Aplanamiento Moderado',
+                'optionStarkesAbflachen': '[es] Aplanamiento Fuerte',
+                'loggedInUserFactorLabel': '[es] Factor de Usuarios Conectados (% del Total):',
+                'simultaneousActiveUserFactorLabel': '[es] Factor de Usuarios Activos Simultáneamente (% de Conectados):',
+                'maxUsersLabel': '[es] Número Máximo de Usuarios:',
+                'initialVRAMLabel': '[es] vRAM Inicial por Unidad GPU Base (GB):',
+                'oneTimeHardwareCostLabel': '[es] Costo Único del Clúster de Hardware (€):',
+                'calculateButton': '[es] Calcular',
+                'tabUserGrowth': '[es] Crecimiento de Usuarios',
+                'tabInfrastructure': '[es] Requisitos de Infraestructura',
+                'tabCosts': '[es] Estimación de Costos',
+                'headerUserGrowth': '[es] Crecimiento de Usuarios y Usuarios Activos',
+                'headerInfrastructure': '[es] Requisitos de Infraestructura',
+                'headerCosts': '[es] Estimación de Costos',
+                'toggleDarkMode': '[es] Modo Oscuro',
+                'toggleLightMode': '[es] Modo Claro',
+                'summaryStartUsers': '[es] Conteo inicial:',
+                'summaryUsersSuffix': '[es] usuarios desde',
+                'summaryMaxCapacityReached': '[es] Capacidad máxima ({maxUsers} usuarios) alcanzada después de:',
+                'summaryQuarters': '[es] trimestres',
+                'summaryYears': '[es] años',
+                'summaryTimeTo5PlusActive': '[es] Tiempo hasta 5+ usuarios activos simultáneos:',
+                'summaryNotReached': '[es] no alcanzado',
+                'summaryActiveUsersStart': '[es] Usuarios activos al inicio ({quarter}):',
+                'summaryActiveUsersAtMax': '[es] Usuarios activos con {maxUsers} usuarios ({quarter}):',
+                'tableHeaderQuarter': '[es] Trimestre',
+                'tableHeaderTotalUsers': '[es] Usuarios Totales',
+                'tableHeaderLoggedIn': '[es] Conectados',
+                'tableHeaderSimultaneouslyActive': '[es] Activos Simultáneamente',
+                'tableHeaderRequiredGPUs': '[es] GPUs Requeridas',
+                'tableHeaderRecommendedConfig': '[es] Configuración vRAM Recomendada',
+                'vramSuffixGB': '[es] GB',
+                'vramSuffixOrMore': '[es] GB (o más)',
+                'tableHeaderMonthlyOperatingCosts': '[es] Costos Operativos Mensuales (€)',
+                'tableHeaderOneTimeClusterCost': '[es] Costo Único del Clúster de Hardware (€)',
+                'tableHeaderAnnualGPUCost': '[es] Costo Anual Adicional de GPU (€)',
+                'chartLabelTotalUsers': '[es] Usuarios Totales',
+                'chartLabelLoggedInUsers': '[es] Usuarios Conectados',
+                'chartLabelActiveUsers': '[es] Usuarios Activos Simultáneamente',
+                'chartLabelRequiredGPUs': '[es] GPUs Requeridas',
+                'chartLabelMonthlyCosts': '[es] Costos Operativos Mensuales (€)',
+                'tooltipStartQuarter': '[es] Seleccione el trimestre en que comienza la proyección.',
+                'tooltipStartUsers': '[es] El número de usuarios al inicio de la proyección.',
+                'tooltipInitialGrowthRate': '[es] El crecimiento porcentual de usuarios por trimestre durante la fase inicial.',
+                'tooltipInitialExponentialYears': '[es] Cuántos años se mantendrá la tasa de crecimiento exponencial inicial.',
+                'tooltipGrowthTypeAfterInitial': '[es] Cómo cambia la tasa de crecimiento después de la fase exponencial inicial.',
+                'tooltipLoggedInUserFactor': '[es] Porcentaje del total de usuarios que están conectados.',
+                'tooltipSimultaneousActiveUserFactor': '[es] Porcentaje de usuarios conectados que están activos al mismo tiempo.',
+                'tooltipMaxUsers': '[es] El número máximo de usuarios para el que está previsto el sistema.',
+                'tooltipInitialVRAM': '[es] La cantidad de vRAM proporcionada por una única unidad de configuración GPU base.',
+                'tooltipOneTimeHardwareCost': '[es] El costo inicial único para configurar el clúster de hardware.',
+                'tooltipDarkMode': '[es] Alternar entre temas visuales claro y oscuro.',
+                'tooltipLanguage': '[es] Seleccione el idioma de visualización para la calculadora.',
+            },
+            // Add fr, pt, hi, zh, ja with SIMILARLY COMPLETE placeholders
+            'fr': { /* ... ALL KEYS WITH [fr] PREFIX ... */ 'pageTitle': '[fr] Calculateur...', 'mainHeader': '[fr] Calculateur...', 'calculateButton': '[fr] Calculer', 'toggleDarkMode': '[fr] Mode Sombre', 'toggleLightMode': '[fr] Mode Clair', 'tooltipStartQuarter': '[fr] Trimestre de début', 'tooltipDarkMode': '[fr] Basculer mode sombre.', 'tooltipLanguage': '[fr] Sélectionner la langue.'},
+            'pt': { /* ... ALL KEYS WITH [pt] PREFIX ... */ 'pageTitle': '[pt] Calculadora...', 'mainHeader': '[pt] Calculadora...', 'calculateButton': '[pt] Calcular', 'toggleDarkMode': '[pt] Modo Escuro', 'toggleLightMode': '[pt] Modo Claro', 'tooltipStartQuarter': '[pt] Trimestre inicial', 'tooltipDarkMode': '[pt] Alternar modo escuro.', 'tooltipLanguage': '[pt] Selecionar idioma.'},
+            'hi': { /* ... ALL KEYS WITH [hi] PREFIX ... */ 'pageTitle': '[hi] कैलकुलेटर...', 'mainHeader': '[hi] कैलकुलेटर...', 'calculateButton': '[hi] गणना करें', 'toggleDarkMode': '[hi] डार्क मोड', 'toggleLightMode': '[hi] लाइट मोड', 'tooltipStartQuarter': '[hi] प्रारंभिक तिमाही', 'tooltipDarkMode': '[hi] डार्क मोड टॉगल करें।', 'tooltipLanguage': '[hi] भाषा चुनें।'},
+            'zh': { /* ... ALL KEYS WITH [zh] PREFIX ... */ 'pageTitle': '[zh] 基础设施扩展计算器', 'mainHeader': '[zh] LLM基础设施扩展计算器', 'calculateButton': '[zh] 计算', 'toggleDarkMode': '[zh] 深色模式', 'toggleLightMode': '[zh] 浅色模式', 'tooltipStartQuarter': '[zh] 开始季度', 'tooltipDarkMode': '[zh] 切换深色模式。', 'tooltipLanguage': '[zh] 选择语言。'},
+            'ja': { /* ... ALL KEYS WITH [ja] PREFIX ... */ 'pageTitle': '[ja] インフラストラクチャスケーリング計算機', 'mainHeader': '[ja] LLMインフラストラクチャスケーリング計算機', 'calculateButton': '[ja] 計算する', 'toggleDarkMode': '[ja] ダークモード', 'toggleLightMode': '[ja] ライトモード', 'tooltipStartQuarter': '[ja] 開始四半期', 'tooltipDarkMode': '[ja] ダークモードを切り替える。', 'tooltipLanguage': '[ja] 言語を選択。'}
+        };
+
+        function _getTranslation(key, lang = currentLanguage, replacements = {}) {
+            let text = key; // Default to the key itself if no translation found
+            if (translations[lang] && typeof translations[lang][key] !== 'undefined') {
+                text = translations[lang][key];
+            } else if (translations['en'] && typeof translations['en'][key] !== 'undefined') { // Fallback to English
+                text = translations['en'][key];
+            }
+            // Apply replacements
+            for (const placeholder in replacements) {
+                text = text.replace(new RegExp(`{${placeholder}}`, 'g'), replacements[placeholder]);
+            }
+            return text;
+        }
+        
+        // --- SETTINGS & UI ---
+        function applyTranslationsForStaticElements() {
+            document.documentElement.lang = currentLanguage;
+            // Update static text elements
+            document.querySelectorAll('[data-translate-key]').forEach(el => {
+                const key = el.getAttribute('data-translate-key');
+                const translation = _getTranslation(key);
+                if (el.tagName === 'INPUT' && (el.type === 'button' || el.type === 'submit' || el.type === 'reset')) {
+                    el.value = translation;
+                } else if (el.tagName === 'BUTTON') {
+                     el.textContent = translation;
+                } else if (el.tagName === 'INPUT' && el.placeholder) {
+                    el.placeholder = translation;
+                } else if (el.tagName === 'TITLE') {
+                     document.title = translation; // Correctly set document title
+                } else {
+                    el.innerHTML = translation; 
+                }
+            });
+            // Update tooltips
+            document.querySelectorAll('[data-tooltip-key]').forEach(el => {
+                const key = el.getAttribute('data-tooltip-key');
+                el.setAttribute('title', _getTranslation(key));
+            });
+            // Update dark mode button text specifically
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            if (document.body.classList.contains('dark-mode')) {
+                darkModeToggle.textContent = _getTranslation('toggleLightMode');
+            } else {
+                darkModeToggle.textContent = _getTranslation('toggleDarkMode');
+            }
+            // Update SVG arrow color for language selector
+            const langSelector = document.getElementById('languageSelector');
+            const arrowColor = getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim();
+            langSelector.style.backgroundImage = `url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3E%3Cpath fill='${arrowColor}' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E")`;
+
+        }
+
+        function updateChartDefaultStyles() {
+            Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-color');
+            // You might need to update other defaults if they depend on theme
+        }
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('calculatorLanguage', lang);
+            applyTranslationsForStaticElements(); // Update static text
+            calculateAndDisplay(); // Recalculate and re-render all dynamic content (charts, tables, summary)
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            localStorage.setItem('calculatorDarkMode', isDarkMode);
+            
+            updateChartDefaultStyles(); // Update chart global text color before re-render
+            applyTranslationsForStaticElements(); // Update static text (like dark mode button itself, SVG arrow)
+            calculateAndDisplay(); // Re-render all to apply theme changes
+        }
+        
+        function initSettings() {
+            // Language Selector
+            const langSelector = document.getElementById('languageSelector');
+            const availableLanguages = {
+                'en': 'English', 'de': 'Deutsch', 'es': 'Español', 'fr': 'Français',
+                'pt': 'Português', 'hi': 'हिन्दी', 'zh': '中文 (简体)', 'ja': '日本語'
+            };
+            for (const langCode in availableLanguages) {
+                const option = document.createElement('option');
+                option.value = langCode;
+                option.textContent = availableLanguages[langCode];
+                langSelector.appendChild(option);
+            }
+            langSelector.addEventListener('change', (e) => setLanguage(e.target.value));
+            langSelector.setAttribute('data-tooltip-key', 'tooltipLanguage'); // For JS to pick up
+
+            // Dark Mode Toggle
+            document.getElementById('darkModeToggle').addEventListener('click', toggleDarkMode);
+            document.getElementById('darkModeToggle').setAttribute('data-tooltip-key', 'tooltipDarkMode');
+
+
+            // Load preferences
+            const savedLang = localStorage.getItem('calculatorLanguage');
+            if (savedLang && translations[savedLang]) {
+                currentLanguage = savedLang;
+            }
+            langSelector.value = currentLanguage; // Set dropdown to loaded/default lang
+
+            const savedDarkMode = localStorage.getItem('calculatorDarkMode') === 'true';
+            if (savedDarkMode) {
+                document.body.classList.add('dark-mode');
+            }
+            
+            updateChartDefaultStyles(); // Set initial chart default colors based on loaded theme
+            applyTranslationsForStaticElements(); // Apply loaded language and update dark mode button text etc.
+        }
+
+        // --- CORE CALCULATOR LOGIC ---
+        function calculateUserGrowth(
+            startUsers, initialQuarterlyGrowthRate, maxUsers, max_projection_quarters, 
+            startQuarterStr, initialExponentialYears, flatteningTypeAfterInitial,
+            loggedInUserFactorPercent, simultaneousActiveUserFactorPercent
+        ) {
+            let results = [];
+            let currentTotalUsers = startUsers;
+            const [startYear, startQ_numStr] = startQuarterStr.split('_');
+            const year = parseInt(startYear);
+            const quarter_of_year = parseInt(startQ_numStr.substring(1)); 
+            const exponentialQuartersThreshold = initialExponentialYears * 4; 
+            const loggedInFactorDecimal = loggedInUserFactorPercent / 100;
+            const simultaneousActiveFactorDecimal = simultaneousActiveUserFactorPercent / 100;
+
+            for (let q_idx_in_projection = 0; q_idx_in_projection < max_projection_quarters; q_idx_in_projection++) {
+                const currentSystemQuarterNum = (quarter_of_year - 1 + q_idx_in_projection) % 4 + 1;
+                const currentSystemYear = year + Math.floor((quarter_of_year - 1 + q_idx_in_projection) / 4);
+                const currentQuarterDisplayStr = `${currentSystemYear}_Q${currentSystemQuarterNum}`;
+                
+                const loggedInUsers = Math.ceil(currentTotalUsers * loggedInFactorDecimal);
+                const simultaneousActiveUsers = Math.max(2, Math.ceil(loggedInUsers * simultaneousActiveFactorDecimal)); 
+                
+                results.push({
+                    quarter: currentQuarterDisplayStr, quarterNum: q_idx_in_projection + 1, 
+                    totalUsers: currentTotalUsers, loggedInUsers: loggedInUsers, 
+                    simultaneousActiveUsers: simultaneousActiveUsers
+                });
+
+                if (currentTotalUsers >= maxUsers) break; 
+                
+                let effectiveGrowthRate = initialQuarterlyGrowthRate;
+                if (q_idx_in_projection >= exponentialQuartersThreshold) {
+                    const quartersIntoPhase = q_idx_in_projection - exponentialQuartersThreshold + 1;
+                    if (flatteningTypeAfterInitial === 'moderatesAbflachen') {
+                        effectiveGrowthRate = initialQuarterlyGrowthRate * Math.max(0.2, 1 - 0.05 * quartersIntoPhase);
+                    } else if (flatteningTypeAfterInitial === 'starkesAbflachen') {
+                        effectiveGrowthRate = initialQuarterlyGrowthRate * Math.max(0.05, 1 - 0.1 * quartersIntoPhase);
+                    }
+                }
+                currentTotalUsers = Math.min(Math.ceil(currentTotalUsers * (1 + effectiveGrowthRate / 100)), maxUsers);
+            }
+            return results;
+        }
+
+        function calculateRequiredGPUs(activeUsers) {
+            if (activeUsers <= 2) return 1;
+            if (activeUsers <= 3) return 2;
+            if (activeUsers <= 6) return 4;
+            return Math.ceil(activeUsers / 2);
+        }
+
+        function calculateMonthlyOperatingCost(gpus) {
+            return 500 + (gpus * 1000);
+        }
+
+        // --- DISPLAY FUNCTIONS ---
+        // Main function to orchestrate data calculation and all display updates
+        function calculateAndDisplay() {
+            const startUsers = parseInt(document.getElementById('startUsers').value);
+            const quarterlyGrowthRate = parseFloat(document.getElementById('quarterlyGrowthRate').value);
+            const initialExponentialYears = parseInt(document.getElementById('initialExponentialYears').value);
+            const flatteningTypeAfterInitial = document.getElementById('flatteningTypeAfterInitial').value;
+            const loggedInUserFactor = parseFloat(document.getElementById('loggedInUserFactor').value);
+            const simultaneousActiveUserFactor = parseFloat(document.getElementById('simultaneousActiveUserFactor').value);
+            const maxUsersVal = parseInt(document.getElementById('maxUsers').value);
+            const startQuarter = document.getElementById('startQuarter').value;
+            const initialVRAM = parseInt(document.getElementById('initialVRAM').value);
+            const oneTimeHardwareCost = parseFloat(document.getElementById('oneTimeHardwareCost').value);
+            const maxQuartersProjection = 80; 
+            
+            const growthData = calculateUserGrowth(
+                startUsers, quarterlyGrowthRate, maxUsersVal, maxQuartersProjection, 
+                startQuarter, initialExponentialYears, flatteningTypeAfterInitial,
+                loggedInUserFactor, simultaneousActiveUserFactor 
+            );
+            
+            // Display functions will use _getTranslation for dynamic text parts
+            displayGrowthSummary(growthData, maxUsersVal); 
+            displayGrowthTable(growthData);
+            displayInfrastructureTable(growthData, initialVRAM);
+            displayCostsTable(growthData, oneTimeHardwareCost);
+            
+            // Charts also use _getTranslation for labels and use current theme for colors
+            displayGrowthChart(growthData);
+            displayInfrastructureChart(growthData);
+            displayCostsChart(growthData);
+        }
+
+        function displayGrowthSummary(data, maxUsersInput) {
+            const summaryContainer = document.getElementById('growthSummary');
+            if (!data || data.length === 0) {
+                summaryContainer.innerHTML = `<p>${_getTranslation('summaryNotReached')}</p>`; return;
+            }
+            const first = data[0], last = data[data.length-1];
+            const totalQ = data.length, yearsToEnd = (totalQ/4).toFixed(1);
+            const sigIdx = data.findIndex(i => i.simultaneousActiveUsers >= 5);
+            let timeToSig = _getTranslation('summaryNotReached');
+            if (sigIdx >=0) {
+                const qToSig = sigIdx+1;
+                timeToSig = `${(qToSig/4).toFixed(1)} ${_getTranslation('summaryYears')} (${qToSig} ${_getTranslation('summaryQuarters')})`;
+            }
+            summaryContainer.innerHTML = `
+                <p><strong>${_getTranslation('summaryStartUsers')}</strong> ${first.totalUsers} ${_getTranslation('summaryUsersSuffix')} ${first.quarter}</p>
+                <p><strong>${_getTranslation('summaryMaxCapacityReached', {maxUsers: last.totalUsers})}</strong> ${totalQ} ${_getTranslation('summaryQuarters')} (${yearsToEnd} ${_getTranslation('summaryYears')})</p>
+                <p><strong>${_getTranslation('summaryTimeTo5PlusActive')}</strong> ${timeToSig}</p>
+                <p><strong>${_getTranslation('summaryActiveUsersStart', {quarter: first.quarter})}</strong> ${first.simultaneousActiveUsers}</p>
+                <p><strong>${_getTranslation('summaryActiveUsersAtMax', {maxUsers: last.totalUsers, quarter: last.quarter})}</strong> ${last.simultaneousActiveUsers}</p>
+            `;
+        }
+
+        function displayGrowthTable(data) {
+            const cont = document.getElementById('growthTable');
+            if (!data || !data.length) { cont.innerHTML = ""; return; }
+            let html = `<table><thead><tr>
+                <th>${_getTranslation('tableHeaderQuarter')}</th><th>${_getTranslation('tableHeaderTotalUsers')}</th>
+                <th>${_getTranslation('tableHeaderLoggedIn')}</th><th>${_getTranslation('tableHeaderSimultaneouslyActive')}</th>
+                </tr></thead><tbody>`;
+            data.forEach(r => {html += `<tr><td>${r.quarter}</td><td>${r.totalUsers}</td><td>${r.loggedInUsers}</td><td>${r.simultaneousActiveUsers}</td></tr>`;});
+            cont.innerHTML = html + `</tbody></table>`;
+        }
+
+        function displayInfrastructureTable(data, initialVRAM) {
+            const cont = document.getElementById('infrastructureTable');
+            if (!data || !data.length) { cont.innerHTML = ""; return; }
+            let html = `<table><thead><tr>
+                <th>${_getTranslation('tableHeaderQuarter')}</th><th>${_getTranslation('tableHeaderSimultaneouslyActive')}</th>
+                <th>${_getTranslation('tableHeaderRequiredGPUs')}</th><th>${_getTranslation('tableHeaderRecommendedConfig')}</th>
+                </tr></thead><tbody>`;
+            data.forEach(r => {
+                const gpus = calculateRequiredGPUs(r.simultaneousActiveUsers);
+                let rec;
+                if (r.simultaneousActiveUsers <= 2) rec = `${initialVRAM} ${_getTranslation('vramSuffixGB')}`;
+                else if (r.simultaneousActiveUsers <= 3) rec = `${initialVRAM*2} ${_getTranslation('vramSuffixGB')}`;
+                else if (r.simultaneousActiveUsers <= 6) rec = `${initialVRAM*4} ${_getTranslation('vramSuffixGB')}`;
+                else rec = `${initialVRAM*8} ${_getTranslation('vramSuffixOrMore')}`;
+                html += `<tr><td>${r.quarter}</td><td>${r.simultaneousActiveUsers}</td><td>${gpus}</td><td>${rec}</td></tr>`;
+            });
+            cont.innerHTML = html + `</tbody></table>`;
+        }
+
+        function displayCostsTable(data, oneTimeCost) {
+            const cont = document.getElementById('costsTable');
+            if (!data || !data.length) { cont.innerHTML = ""; return; }
+            let html = `<table><thead><tr>
+                <th>${_getTranslation('tableHeaderQuarter')}</th><th>${_getTranslation('tableHeaderRequiredGPUs')}</th>
+                <th>${_getTranslation('tableHeaderMonthlyOperatingCosts')}</th><th>${_getTranslation('tableHeaderOneTimeClusterCost')}</th>
+                <th>${_getTranslation('tableHeaderAnnualGPUCost')}</th>
+                </tr></thead><tbody>`;
+            data.forEach((r, idx) => {
+                const gpus = calculateRequiredGPUs(r.simultaneousActiveUsers);
+                const monthly = calculateMonthlyOperatingCost(gpus);
+                const oneTime = idx === 0 ? oneTimeCost : 0;
+                const annual = r.quarter.endsWith('_Q1') ? 12000 : 0;
+                html += `<tr><td>${r.quarter}</td><td>${gpus}</td>
+                         <td>${monthly.toLocaleString(currentLanguage)}</td><td>${oneTime.toLocaleString(currentLanguage)}</td>
+                         <td>${annual.toLocaleString(currentLanguage)}</td></tr>`;
+            });
+            cont.innerHTML = html + `</tbody></table>`;
+        }
+        
+        function createChartOptions(extraOptions = {}) {
+            const textColor = getComputedStyle(document.body).getPropertyValue('--text-color');
+            return {
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    x: { ticks: { color: textColor, callback: function(val, index) { const label = this.getLabelForValue(val); return (label.endsWith('Q4') || index === 0 || this.chart.data.labels.length - 1 === index) ? label : ''; }}}, 
+                    y: { beginAtZero: true, ticks: { color: textColor, ...extraOptions.yTicks }}
+                },
+                plugins: { legend: { labels: { color: textColor } } }
+            };
+        }
+
+        function displayGrowthChart(data) {
+            if (userGrowthChart) userGrowthChart.destroy();
+            if (!data || !data.length) return;
+            userGrowthChart = new Chart(document.getElementById('userGrowthChart').getContext('2d'), {
+                type: 'line', data: { labels: data.map(item => item.quarter),
+                    datasets: [
+                        { label: _getTranslation('chartLabelTotalUsers'), data: data.map(i => i.totalUsers), borderColor: 'rgba(54, 162, 235, 1)', backgroundColor: 'rgba(54, 162, 235, 0.2)', fill: true },
+                        { label: _getTranslation('chartLabelLoggedInUsers'), data: data.map(i => i.loggedInUsers), borderColor: 'rgba(255, 159, 64, 1)', backgroundColor: 'rgba(255, 159, 64, 0.2)', fill: true },
+                        { label: _getTranslation('chartLabelActiveUsers'), data: data.map(i => i.simultaneousActiveUsers), borderColor: 'rgba(255, 99, 132, 1)', backgroundColor: 'rgba(255, 99, 132, 0.2)', fill: true }
+                    ]},
+                options: createChartOptions()
+            });
+        }
+
+        function displayInfrastructureChart(data) {
+            if (infrastructureChart) infrastructureChart.destroy();
+            if (!data || !data.length) return;
+            infrastructureChart = new Chart(document.getElementById('infrastructureChart').getContext('2d'), {
+                type: 'bar', data: { labels: data.map(item => item.quarter),
+                    datasets: [
+                        { label: _getTranslation('chartLabelActiveUsers'), data: data.map(i => i.simultaneousActiveUsers), borderColor: 'rgba(255, 99, 132, 1)', backgroundColor: 'rgba(255, 99, 132, 0.7)', type: 'line' },
+                        { label: _getTranslation('chartLabelRequiredGPUs'), data: data.map(i => calculateRequiredGPUs(i.simultaneousActiveUsers)), borderColor: 'rgba(75, 192, 192, 1)', backgroundColor: 'rgba(75, 192, 192, 0.7)'}
+                    ]},
+                options: createChartOptions()
+            });
+        }
+
+        function displayCostsChart(data) { 
+            if (costsChart) costsChart.destroy();
+            if (!data || !data.length) return;
+            costsChart = new Chart(document.getElementById('costsChart').getContext('2d'), {
+                type: 'line', data: { labels: data.map(item => item.quarter),
+                    datasets: [ { label: _getTranslation('chartLabelMonthlyCosts'), data: data.map(i => calculateMonthlyOperatingCost(calculateRequiredGPUs(i.simultaneousActiveUsers))), borderColor: 'rgba(153, 102, 255, 1)', backgroundColor: 'rgba(153, 102, 255, 0.2)', fill: true }]
+                },
+                options: createChartOptions({ yTicks: { callback: function(val) { return val.toLocaleString(currentLanguage) + ' €'; }}})
+            });
+        }
+
+        function openTab(evt, tabName) {
+            document.querySelectorAll(".tabcontent").forEach(tc => tc.classList.remove("visible"));
+            document.querySelectorAll(".tablinks").forEach(tl => tl.classList.remove("active"));
+            document.getElementById(tabName).classList.add("visible");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            initSettings(); // Initialize language, dark mode, populate selectors
+            calculateAndDisplay(); // Perform initial calculation and display
+        };
+    </script>
+</body>
+</html>
